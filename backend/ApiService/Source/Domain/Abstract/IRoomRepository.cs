@@ -41,5 +41,6 @@ namespace Epam.ItMarathon.ApiService.Domain.Abstract
         /// <returns>Returns <see cref="Room"/> if found, otherwise <see cref="ValidationResult"/></returns>
         public Task<Result<Room, ValidationResult>> GetByRoomCodeAsync(string roomCode,
             CancellationToken cancellationToken);
+        Task GetByUserCodeAsync(object userCode, CancellationToken cancellationToken);
     }
 }
