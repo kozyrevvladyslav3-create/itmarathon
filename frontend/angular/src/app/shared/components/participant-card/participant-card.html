@@ -37,7 +37,7 @@
 
   @if (isCurrentUserAdmin() && !participant().isAdmin) {
     <app-icon-button
-      [iconName]="iconKick"
+      [iconName]="iconInfo"
       [ariaLabel]="ariaLabelKick"
       (click)="onKickClick()"
     />
