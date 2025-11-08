@@ -97,4 +97,16 @@ export class ApiService {
       { params, observe: 'response' }
     );
   }
+
+  public kickUser(
+    userCode: string,
+    userId: number
+  ): Observable<HttpResponse<void>> {
+    const params = new HttpParams().set('userCode', userCode);
+
+    return this.#http.delete<void>(
+      `${this.#baseUrl}${Endpoint.users}/${userId}`,
+      { params, observe: 'response' }
+    );
+  }
 }

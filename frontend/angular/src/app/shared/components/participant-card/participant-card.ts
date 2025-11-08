@@ -39,6 +39,7 @@ export class ParticipantCard {
   readonly showCopyIcon = input<boolean>(false);
   readonly userCode = input<string>('');
   readonly showInfoIcon = input<boolean>(false);
+  readonly isRoomDrawn = input<boolean>(false);
 
   readonly #popup = inject(PopupService);
   readonly #urlService = inject(UrlService);
@@ -58,6 +59,8 @@ export class ParticipantCard {
   public readonly ariaLabelCopy = AriaLabel.ParticipantLink;
   public readonly iconInfo = IconName.Info;
   public readonly ariaLabelInfo = AriaLabel.Info;
+  public readonly iconKick = IconName.Kick;
+  public readonly ariaLabelKick = AriaLabel.KickUser;
 
   @HostBinding('tabindex') tab = 0;
   @HostBinding('class.list-row') rowClass = true;
@@ -167,4 +170,20 @@ export class ParticipantCard {
       true
     );
   }
+
+  public onKickClick(): void {
+    const userId = this.participant().id;
+    if (userId) {
+      this.#userService.kickUser(userId).subscribe();
+    }
+  }
+
+  public readonly showKickButton = computed(() => {
+    return (
+      this.isCurrentUserAdmin() &&
+      !this.isRoomDrawn() &&
+      !this.participant().isAdmin &&
+      !this.isCurrentUser()
+    );
+  });
 }

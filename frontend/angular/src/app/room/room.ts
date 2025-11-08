@@ -1,13 +1,14 @@
 import {
   Component,
   computed,
+  effect,
   ElementRef,
   inject,
   OnInit,
   signal,
   viewChild,
 } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { tap } from 'rxjs';
 
 import { RoomInfo } from './components/room-info/room-info';
@@ -29,9 +30,10 @@ import { MyWishlistModal } from './components/my-wishlist/components/my-wishlist
 import { LottieAnimationService } from '../core/services/lottie-animation';
 import { PersonalInfoCard } from './components/personal-info-card/personal-info-card';
 import { UrlService } from '../core/services/url';
-import { NavigationLinkSegment } from '../app.enum';
+import { NavigationLinkSegment, Path, ToastMessage, MessageType } from '../app.enum';
 import { PersonalInfoModal } from './components/personal-info-modal/personal-info-modal';
 import { InvitationModal } from '../shared/components/invitation-modal/invitation-modal';
+import { ToastService } from '../core/services/toast';
 
 @Component({
   selector: 'app-room',
@@ -56,6 +58,8 @@ export class Room implements OnInit {
   readonly #modalService = inject(ModalService);
   readonly #lottieAnimationService = inject(LottieAnimationService);
   readonly #urlService = inject(UrlService);
+  readonly #router = inject(Router);
+  readonly #toasterService = inject(ToastService);
 
   public readonly roomData = this.#roomService.roomData;
   public readonly users = this.#userService.users;
@@ -86,6 +90,24 @@ export class Room implements OnInit {
         ).absoluteUrl
       : ''
   );
+
+  constructor() {
+    // Watch for when current user becomes undefined (user was kicked)
+    effect(() => {
+      const user = this.currentUser();
+      const code = this.userCode();
+      const users = this.users();
+      // Only check if users have been loaded (array is not empty) and user code exists but current user is undefined
+      // This prevents false positives when users haven't been fetched yet
+      if (code && users.length > 0 && !user) {
+        this.#toasterService.show(
+          ToastMessage.UnavailableRoom,
+          MessageType.Error
+        );
+        this.#router.navigate([Path.Home]);
+      }
+    });
+  }
 
   ngOnInit(): void {
     this.#route.paramMap.subscribe((params) => {

@@ -20,6 +20,16 @@ namespace Epam.ItMarathon.ApiService.Application.UseCases.User.Handlers
             {
                 return roomResult;
             }
+
+            // Get user by provided code and check user.IsAdmin
+            var adminUser = roomResult.Value.Users.FirstOrDefault(user => user.AuthCode.Equals(request.UserCode));
+            if (adminUser is null || !adminUser.IsAdmin)
+            {
+                return Result.Failure<RoomAggregate, ValidationResult>(new ForbiddenError([
+                    new ValidationFailure("userCode", "Only admin can remove users from the room.")
+                ]));
+            }
+
             //2. Delete user by id in User's room - room DeleteUser(userId)
             var room = roomResult.Value;
             var deleteResult = room.DeleteUser(request.UserId);
