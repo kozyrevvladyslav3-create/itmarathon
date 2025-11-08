@@ -107,6 +107,16 @@ export class ParticipantCard {
     this.#showPopup();
   }
 
+  public onKick(): void {
+    if (!this.participant().isAdmin) {
+      this.#openModal1();
+
+      return;
+    }
+
+    this.#showPopup1();
+  }
+
   public onCopyHover(target: EventTarget | null): void {
     if (target instanceof HTMLElement) {
       this.#popup.show(
@@ -125,6 +135,32 @@ export class ParticipantCard {
   }
 
   #openModal(): void {
+    const personalInfo = getPersonalInfo(this.participant());
+    const roomLink = this.#urlService.getNavigationLinks(
+      this.participant().userCode || '',
+      NavigationLinkSegment.Join
+    ).absoluteUrl;
+
+    this.#userService
+      .getUsers()
+      .pipe(
+        tap(({ status }) => {
+          if (status === 200) {
+            this.#modalService.openWithResult(
+              ParticipantInfoModal,
+              { personalInfo, roomLink },
+              {
+                buttonAction: () => this.#modalService.close(),
+                closeModal: () => this.#modalService.close(),
+              }
+            );
+          }
+        })
+      )
+      .subscribe();
+  }
+
+  #openModal1(): void {
     const personalInfo = getPersonalInfo(this.participant());
     const roomLink = this.#urlService.getNavigationLinks(
       this.participant().userCode || '',
