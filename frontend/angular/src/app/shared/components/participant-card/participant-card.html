@@ -34,4 +34,12 @@
       (click)="onInfoClick()"
     />
   }
+
+  @if (showKickButton()) {
+    <app-icon-button
+      [iconName]="iconKick"
+      [ariaLabel]="ariaLabelKick"
+      (click)="onKickClick()"
+    />
+  }
 </span>

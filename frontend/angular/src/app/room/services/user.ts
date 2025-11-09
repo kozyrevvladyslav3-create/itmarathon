@@ -1,11 +1,12 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
-import { Observable, tap } from 'rxjs';
-import { HttpResponse } from '@angular/common/http';
+import { Observable, tap, catchError, of } from 'rxjs';
+import { HttpResponse, HttpErrorResponse } from '@angular/common/http';
+import { Router } from '@angular/router';
 
 import { ApiService } from '../../core/services/api';
 import { RoomService } from './room';
 import { ToastService } from '../../core/services/toast';
-import { MessageType, ToastMessage } from '../../app.enum';
+import { MessageType, ToastMessage, Path } from '../../app.enum';
 import type { User } from '../../app.models';
 
 @Injectable({
@@ -15,6 +16,7 @@ export class UserService {
   readonly #apiService = inject(ApiService);
   readonly #roomService = inject(RoomService);
   readonly #toasterService = inject(ToastService);
+  readonly #router = inject(Router);
 
   readonly #userCode = signal<string>('');
   readonly #users = signal<User[]>([]);
@@ -34,11 +36,35 @@ export class UserService {
   }
 
   public getUsers(): Observable<HttpResponse<User[]>> {
-    return this.#apiService.getUsers(this.#userCode()).pipe(
+    const currentUserCode = this.#userCode();
+    return this.#apiService.getUsers(currentUserCode).pipe(
       tap((result) => {
         if (result?.body) {
           this.#users.set(result.body);
+          // Check if current user is still in the room
+          const isCurrentUserInRoom = result.body.some(
+            (user) => user.userCode === currentUserCode
+          );
+          if (!isCurrentUserInRoom && currentUserCode) {
+            // User was kicked, redirect to home
+            this.#toasterService.show(
+              ToastMessage.UnavailableRoom,
+              MessageType.Error
+            );
+            this.#router.navigate([Path.Home]);
+          }
         }
+      }),
+      catchError((error: HttpErrorResponse) => {
+        // If 404 or user not found, redirect to home
+        if (error.status === 404 && currentUserCode) {
+          this.#toasterService.show(
+            ToastMessage.UnavailableRoom,
+            MessageType.Error
+          );
+          this.#router.navigate([Path.Home]);
+        }
+        return of(error as any);
       })
     );
   }
@@ -52,6 +78,26 @@ export class UserService {
           this.#toasterService.show(
             ToastMessage.SuccessDrawNames,
             MessageType.Success
+          );
+        }
+      })
+    );
+  }
+
+  public kickUser(userId: number): Observable<HttpResponse<void>> {
+    return this.#apiService.kickUser(this.#userCode(), userId).pipe(
+      tap(({ status }) => {
+        if (status === 200) {
+          this.#roomService.getRoomByUserCode(this.#userCode());
+          this.getUsers().subscribe();
+          this.#toasterService.show(
+            ToastMessage.SuccessKickUser,
+            MessageType.Success
+          );
+        } else {
+          this.#toasterService.show(
+            ToastMessage.SomethingWentWrong,
+            MessageType.Error
           );
         }
       })

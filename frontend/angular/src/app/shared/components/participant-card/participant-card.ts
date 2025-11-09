@@ -39,6 +39,7 @@ export class ParticipantCard {
   readonly showCopyIcon = input<boolean>(false);
   readonly userCode = input<string>('');
   readonly showInfoIcon = input<boolean>(false);
+  readonly isRoomDrawn = input<boolean>(false);
 
   readonly #popup = inject(PopupService);
   readonly #urlService = inject(UrlService);
@@ -58,6 +59,8 @@ export class ParticipantCard {
   public readonly ariaLabelCopy = AriaLabel.ParticipantLink;
   public readonly iconInfo = IconName.Info;
   public readonly ariaLabelInfo = AriaLabel.Info;
+  public readonly iconKick = IconName.Kick;
+  public readonly ariaLabelKick = AriaLabel.KickUser;
 
   @HostBinding('tabindex') tab = 0;
   @HostBinding('class.list-row') rowClass = true;
@@ -104,6 +107,16 @@ export class ParticipantCard {
     this.#showPopup();
   }
 
+  public onKick(): void {
+    if (!this.participant().isAdmin) {
+      this.#openModal1();
+
+      return;
+    }
+
+    this.#showPopup1();
+  }
+
   public onCopyHover(target: EventTarget | null): void {
     if (target instanceof HTMLElement) {
       this.#popup.show(
@@ -122,6 +135,32 @@ export class ParticipantCard {
   }
 
   #openModal(): void {
+    const personalInfo = getPersonalInfo(this.participant());
+    const roomLink = this.#urlService.getNavigationLinks(
+      this.participant().userCode || '',
+      NavigationLinkSegment.Join
+    ).absoluteUrl;
+
+    this.#userService
+      .getUsers()
+      .pipe(
+        tap(({ status }) => {
+          if (status === 200) {
+            this.#modalService.openWithResult(
+              ParticipantInfoModal,
+              { personalInfo, roomLink },
+              {
+                buttonAction: () => this.#modalService.close(),
+                closeModal: () => this.#modalService.close(),
+              }
+            );
+          }
+        })
+      )
+      .subscribe();
+  }
+
+  #openModal1(): void {
     const personalInfo = getPersonalInfo(this.participant());
     const roomLink = this.#urlService.getNavigationLinks(
       this.participant().userCode || '',
@@ -167,4 +206,20 @@ export class ParticipantCard {
       true
     );
   }
+
+  public onKickClick(): void {
+    const userId = this.participant().id;
+    if (userId) {
+      this.#userService.kickUser(userId).subscribe();
+    }
+  }
+
+  public readonly showKickButton = computed(() => {
+    return (
+      this.isCurrentUserAdmin() &&
+      !this.isRoomDrawn() &&
+      !this.participant().isAdmin &&
+      !this.isCurrentUser()
+    );
+  });
 }
